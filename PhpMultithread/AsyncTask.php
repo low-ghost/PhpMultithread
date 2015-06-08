@@ -1,17 +1,25 @@
 <?php namespace low_ghost\PhpMultithread;
 
-require 'vendor/autoload.php';
-
 use Symfony\Component\Process\Process;
 
-$process = new Process('ls -lsa');
-$process->run();
+class AsyncTask {
 
-// executes after the command finishes
-if (!$process->isSuccessful()) {
-    throw new \RuntimeException($process->getErrorOutput());
+    public function create($cmd, callable $cb = null)
+    {
+
+        $process = new Process($cmd);
+        $process->start();
+        yield; //yield to other tasks, avoiding extra calls to isRunning()
+        while ($process->isRunning()) {
+            yield;
+            //throw new \RuntimeException($process->getErrorOutput());
+        }
+
+        if ($cb){
+            file_put_contents('ls.tmp', $cb($process->getOutput()));
+            yield;
+        }
+    }
 }
-
-echo $process->getOutput();
 
 ?>

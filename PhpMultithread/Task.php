@@ -1,5 +1,7 @@
 <?php namespace low_ghost\PhpMultithread;
 
+use Generator;
+
 class Task {
     protected $taskId;
     protected $coroutine;
