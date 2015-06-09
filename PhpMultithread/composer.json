@@ -1,4 +1,9 @@
 {
+    "name": "low_ghost/PhpMultithread",
+    "description": "Minimalistic Multithreading with Coroutines",
+    "keywords": ["Coroutines", "Multithreading", "Asynchronous"],
+    "license": "MIT",
+    "type": "project",
     "require": {
         "symfony/Process": "^2.7"
     },

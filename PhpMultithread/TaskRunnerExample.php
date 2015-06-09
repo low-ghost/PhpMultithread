@@ -11,4 +11,8 @@ $asyncTask = new AsyncTask;
 $printResults = function($res){ return $res; };
 
 $scheduler->newTask($asyncTask->create('ls -a', $printResults));
+$scheduler->newTask($asyncTask->create('ls -l', $printResults));
+$scheduler->run();
+
+?>
 

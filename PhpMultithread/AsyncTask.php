@@ -16,7 +16,7 @@ class AsyncTask {
         }
 
         if ($cb){
-            file_put_contents('ls.tmp', $cb($process->getOutput()));
+            echo $cb($process->getOutput());
             yield;
         }
     }
