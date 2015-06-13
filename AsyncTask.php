@@ -1,6 +1,8 @@
 <?php namespace low_ghost\PhpMultithread;
 
-use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Process,
+    Symfony\Component\Process\PhpProcess,
+    SuperClosure\Serializer;
 
 class AsyncTask {
 
@@ -20,6 +22,47 @@ class AsyncTask {
             yield;
         }
     }
+
+    public function createPhp($cmd, callable $cb = null)
+    {
+        $process = new PhpProcess($cmd);
+        $process->start();
+        yield; //yield to other tasks, avoiding extra calls to isRunning()
+        while ($process->isRunning()) {
+            yield;
+            //throw new \RuntimeException($process->getErrorOutput());
+        }
+
+        if ($cb){
+            if (!$process->isSuccessful())
+                echo $process->getErrorOutput();
+            else
+                echo $cb($process->getOutput());
+            yield;
+        }
+    }
+
+    public function createPhpClosure($func, callable $cb = null)
+    {
+        $serializer = new Serializer();
+        $process = new Process('php CreatePhpClosure.php ' . escapeshellarg($serializer->serialize($func)));
+        $process->start();
+        yield; //yield to other tasks, avoiding extra calls to isRunning()
+        while ($process->isRunning()) {
+            yield;
+            //throw new \RuntimeException($process->getErrorOutput());
+        }
+
+        if ($cb){
+            if (!$process->isSuccessful())
+                echo $process->getErrorOutput();
+            else
+                echo $cb($process->getOutput());
+            yield;
+        }
+    }
+
+
 }
 
 ?>
