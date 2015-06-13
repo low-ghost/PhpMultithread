@@ -2,11 +2,12 @@
 
 use Symfony\Component\Process\Process,
     Symfony\Component\Process\PhpProcess,
-    SuperClosure\Serializer;
+    SuperClosure\Serializer,
+    RuntimeException;
 
 class AsyncTask {
 
-    public function create($cmd, callable $cb = null)
+    public function create($cmd, callable $cb = null, $name = false, $parent = false)
     {
 
         $process = new Process($cmd);
@@ -17,32 +18,30 @@ class AsyncTask {
             //throw new \RuntimeException($process->getErrorOutput());
         }
 
-        if ($cb){
-            echo $cb($process->getOutput());
-            yield;
-        }
+        if (!$process->isSuccessful())
+            throw new RuntimeException($process->getErrorOutput());
+
+        $output = $cb ? $cb($process->getOutput()) : $process->getOutput();
+        yield ($this->store($output, $name, $parent));
     }
 
-    public function createPhp($cmd, callable $cb = null)
+    public function createPhp($cmd, callable $cb = null, $name = false, $parent = false)
     {
         $process = new PhpProcess($cmd);
         $process->start();
         yield; //yield to other tasks, avoiding extra calls to isRunning()
         while ($process->isRunning()) {
             yield;
-            //throw new \RuntimeException($process->getErrorOutput());
         }
 
-        if ($cb){
-            if (!$process->isSuccessful())
-                echo $process->getErrorOutput();
-            else
-                echo $cb($process->getOutput());
-            yield;
-        }
+        if (!$process->isSuccessful())
+            throw new RuntimeException($process->getErrorOutput());
+
+        $output = $cb ? $cb($process->getOutput()) : $process->getOutput();
+        yield ($this->store($output, $name, $parent));
     }
 
-    public function createPhpClosure($func, callable $cb = null)
+    public function createPhpClosure($func, callable $cb = null, $name = false, $parent = false)
     {
         $serializer = new Serializer();
         $process = new Process('php CreatePhpClosure.php ' . escapeshellarg($serializer->serialize($func)));
@@ -53,13 +52,23 @@ class AsyncTask {
             //throw new \RuntimeException($process->getErrorOutput());
         }
 
-        if ($cb){
-            if (!$process->isSuccessful())
-                echo $process->getErrorOutput();
-            else
-                echo $cb($process->getOutput());
-            yield;
-        }
+        if (!$process->isSuccessful())
+            throw new RuntimeException($process->getErrorOutput());
+
+        $output = $cb ? $cb($process->getOutput()) : $process->getOutput();
+        yield ($this->store($output, $name, $parent));
+    }
+
+    public function store($data, $name = false, $parent = false)
+    {
+        return new SystemCall(
+            function(Task $task, Scheduler $scheduler) use ($data, $name, $parent)
+            {
+                $task->setSendValue($scheduler->store($task, $data, $name, $parent));
+                //don't schedule and immediately destroy task
+                $scheduler->killUnscheduled($task);
+            }
+        );
     }
 
 

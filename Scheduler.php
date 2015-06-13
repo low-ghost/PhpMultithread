@@ -1,6 +1,7 @@
 <?php namespace low_ghost\PhpMultithread;
 
 use low_ghost\PhpMultithread\Task,
+    low_ghost\PhpMultithread\SystemCall,
     SplQueue,
     Generator;
 
@@ -8,9 +9,24 @@ class Scheduler {
     protected $maxTaskId = 0;
     protected $taskMap = []; // taskId => task
     protected $taskQueue;
+    private $returnObj;
 
     public function __construct() {
         $this->taskQueue = new SplQueue();
+    }
+
+    public function store($task, $data, $name = false, $parent = false)
+    {
+        if ($parent !== false){
+            if (!isset($this->returnObj[$parent]))
+                $this->returnObj[$parent] = [];
+            if ($name)
+                $this->returnObj[$parent][$name] = $data;
+            else
+                $this->returnObj[$parent] = $data;
+        } else {
+            $this->returnObj[$task->getTaskId()] = $data;
+        }
     }
 
     public function newTask(Generator $coroutine) {
@@ -21,14 +37,25 @@ class Scheduler {
         return $tid;
     }
 
-    public function schedule(Task $task) {
+    public function schedule(Task $task)
+    {
         $this->taskQueue->enqueue($task);
+    }
+
+    public function killUnscheduled($task)
+    {
+        unset($this->taskMap[$task->getTaskId()]);
     }
 
     public function run() {
         while (!$this->taskQueue->isEmpty()) {
             $task = $this->taskQueue->dequeue();
-            $task->run();
+            $var = $task->run();
+
+            if ($var instanceof SystemCall){
+                $var($task, $this);
+                continue;
+            }
 
             if ($task->isFinished()) {
                 unset($this->taskMap[$task->getTaskId()]);
@@ -36,6 +63,7 @@ class Scheduler {
                 $this->schedule($task);
             }
         }
+        return $this->returnObj;
     }
 }
 
