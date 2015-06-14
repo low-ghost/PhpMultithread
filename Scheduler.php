@@ -17,13 +17,15 @@ class Scheduler {
 
     public function store($task, $data, $name = false, $parent = false)
     {
-        if ($parent !== false){
+        if ($parent){
             if (!isset($this->returnObj[$parent]))
                 $this->returnObj[$parent] = [];
             if ($name)
                 $this->returnObj[$parent][$name] = $data;
             else
-                $this->returnObj[$parent] = $data;
+                $this->returnObj[$parent][$task->getTaskId()] = $data;
+        } else if ($name){
+            $this->returnObj[$name] = $data;
         } else {
             $this->returnObj[$task->getTaskId()] = $data;
         }
@@ -51,9 +53,13 @@ class Scheduler {
         while (!$this->taskQueue->isEmpty()) {
             $task = $this->taskQueue->dequeue();
             $var = $task->run();
-
             if ($var instanceof SystemCall){
-                $var($task, $this);
+                try {
+                    $var($task, $this);
+                } catch (Exception $e) {
+                    $task->setException($e);
+                    $this->schedule($task);
+                }
                 continue;
             }
 

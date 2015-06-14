@@ -5,57 +5,50 @@ use Symfony\Component\Process\Process,
     SuperClosure\Serializer,
     RuntimeException;
 
-class AsyncTask {
+class AsyncTask
+{
 
-    public function create($cmd, callable $cb = null, $name = false, $parent = false)
+    public function create($cmd, $cb = null, $name = null, $parent = null, $timeout = null)
     {
-
-        $process = new Process($cmd);
-        $process->start();
-        yield; //yield to other tasks, avoiding extra calls to isRunning()
-        while ($process->isRunning()) {
-            yield;
-            //throw new \RuntimeException($process->getErrorOutput());
+        //check cmd type and create appropiate process
+        if (is_string($cmd)){
+            if (strpos($cmd, "<?php") !== false){
+                $process = new PhpProcess($cmd);
+            } else {
+                $process = new Process($cmd);
+            }
+        } else if (is_callable($cmd)){
+            $serializer = new Serializer();
+            $process = new Process('php CreatePhpClosure.php ' . escapeshellarg($serializer->serialize($cmd)));
+        } else {
+            throw new Exception("Improper command type, must be string, string containing <?php, or closure");
         }
 
-        if (!$process->isSuccessful())
-            throw new RuntimeException($process->getErrorOutput());
+        if ($timeout)
+            $process->setTimeout((int) $timeout);
 
-        $output = $cb ? $cb($process->getOutput()) : $process->getOutput();
-        yield ($this->store($output, $name, $parent));
-    }
-
-    public function createPhp($cmd, callable $cb = null, $name = false, $parent = false)
-    {
-        $process = new PhpProcess($cmd);
+        //start process
         $process->start();
-        yield; //yield to other tasks, avoiding extra calls to isRunning()
+        //yield once to avoid extra calls to isRunning(), assuming process is not instantly finished
+        yield;
         while ($process->isRunning()) {
+            if ($timeout){
+                try {
+                    $process->checkTimeout();
+                } catch (RuntimeException $e) {
+                    //store the error. no need to send SIGKILL to stop process
+                    yield ($this->store(["error" => $e->getMessage()], $name, $parent));
+                }
+            }
             yield;
         }
 
-        if (!$process->isSuccessful())
-            throw new RuntimeException($process->getErrorOutput());
-
-        $output = $cb ? $cb($process->getOutput()) : $process->getOutput();
-        yield ($this->store($output, $name, $parent));
-    }
-
-    public function createPhpClosure($func, callable $cb = null, $name = false, $parent = false)
-    {
-        $serializer = new Serializer();
-        $process = new Process('php CreatePhpClosure.php ' . escapeshellarg($serializer->serialize($func)));
-        $process->start();
-        yield; //yield to other tasks, avoiding extra calls to isRunning()
-        while ($process->isRunning()) {
-            yield;
-            //throw new \RuntimeException($process->getErrorOutput());
+        $output = "";
+        if (!$process->isSuccessful()){
+            $output = ["error" => $process->getErrorOutput()];
+        } else {
+            $output = $cb ? $cb($process->getOutput()) : $process->getOutput();
         }
-
-        if (!$process->isSuccessful())
-            throw new RuntimeException($process->getErrorOutput());
-
-        $output = $cb ? $cb($process->getOutput()) : $process->getOutput();
         yield ($this->store($output, $name, $parent));
     }
 
@@ -70,8 +63,6 @@ class AsyncTask {
             }
         );
     }
-
-
 }
 
 ?>
