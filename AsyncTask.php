@@ -7,7 +7,6 @@ use Symfony\Component\Process\Process,
 
 class AsyncTask
 {
-
     public function create($cmd, $cb = null, $name = null, $parent = null, $timeout = null)
     {
         //check cmd type and create appropiate process
@@ -58,11 +57,9 @@ class AsyncTask
             function(Task $task, Scheduler $scheduler) use ($data, $name, $parent)
             {
                 $task->setSendValue($scheduler->store($task, $data, $name, $parent));
-                //don't schedule and immediately destroy task
-                $scheduler->killUnscheduled($task);
+                $scheduler->schedule($task);
             }
         );
     }
 }
-
 ?>

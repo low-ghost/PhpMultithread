@@ -2,14 +2,16 @@
 
 use Generator;
 
-class Task {
+class Task
+{
     protected $taskId;
     protected $coroutine;
     protected $sendValue = null;
     protected $beforeFirstYield = true;
     protected $exception = null;
 
-    public function __construct($taskId, Generator $coroutine) {
+    public function __construct($taskId, Generator $coroutine)
+    {
         $this->taskId = $taskId;
         $this->coroutine = $coroutine;
     }
@@ -24,15 +26,19 @@ class Task {
         $this->exception = $exception;
     }
 
-    public function setSendValue($sendValue) {
+    public function setSendValue($sendValue)
+    {
         $this->sendValue = $sendValue;
     }
 
-    public function run() {
-        if ($this->beforeFirstYield) {
+    public function run($init)
+    {
+        if ($this->beforeFirstYield){
+            if (!$init)
+                return;
             $this->beforeFirstYield = false;
             return $this->coroutine->current();
-        } elseif ($this->exception) {
+        } elseif ($this->exception){
             $retval = $this->coroutine->throw($this->exception);
             $this->exception = null;
             return $retval;
@@ -43,7 +49,9 @@ class Task {
         }
     }
 
-    public function isFinished() {
+    public function isFinished()
+    {
         return !$this->coroutine->valid();
     }
 }
+?>

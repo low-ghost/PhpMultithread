@@ -5,13 +5,18 @@ use low_ghost\PhpMultithread\Task,
     SplQueue,
     Generator;
 
-class Scheduler {
+class Scheduler
+{
     protected $maxTaskId = 0;
     protected $taskMap = []; // taskId => task
     protected $taskQueue;
     private $returnObj;
+    private $limit;
+    public $runningTasks = [];
 
-    public function __construct() {
+    public function __construct($limit = 0)
+    {
+        $this->limit = $limit;
         $this->taskQueue = new SplQueue();
     }
 
@@ -31,7 +36,8 @@ class Scheduler {
         }
     }
 
-    public function newTask(Generator $coroutine) {
+    public function newTask(Generator $coroutine)
+    {
         $tid = ++$this->maxTaskId;
         $task = new Task($tid, $coroutine);
         $this->taskMap[$tid] = $task;
@@ -44,15 +50,31 @@ class Scheduler {
         $this->taskQueue->enqueue($task);
     }
 
-    public function killUnscheduled($task)
+    public function killUnscheduled($task, $tid = null)
     {
-        unset($this->taskMap[$task->getTaskId()]);
+        $tid = $task ? $task->getTaskId() : $tid;
+        unset($this->taskMap[$tid]);
+        if ($this->limit > 0)
+            unset($this->runningTasks[$tid]);
     }
 
-    public function run() {
+    public function run()
+    {
+        $total = $this->maxTaskId;
+        $init = true;
         while (!$this->taskQueue->isEmpty()) {
             $task = $this->taskQueue->dequeue();
-            $var = $task->run();
+            $tid = $task->getTaskId();
+
+            if ($this->limit > 0){
+                $init = false;
+                if (count($this->runningTasks) < $this->limit && !isset($this->runningTasks[$tid])){
+                    $this->runningTasks[$tid] = $task;
+                    $init = true;
+                }
+            }
+
+            $var = $task->run($init);
             if ($var instanceof SystemCall){
                 try {
                     $var($task, $this);
@@ -63,8 +85,8 @@ class Scheduler {
                 continue;
             }
 
-            if ($task->isFinished()) {
-                unset($this->taskMap[$task->getTaskId()]);
+            if ($task->isFinished()){
+                $this->killUnscheduled(false, $tid);
             } else {
                 $this->schedule($task);
             }
@@ -72,5 +94,4 @@ class Scheduler {
         return $this->returnObj;
     }
 }
-
 ?>
