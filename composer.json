@@ -1,5 +1,5 @@
 {
-    "name": "low_ghost/PhpMultithread",
+    "name": "low_ghost/phpmultithread",
     "description": "Minimalistic Multithreading with Coroutines",
     "keywords": ["Coroutines", "Multithreading", "Asynchronous"],
     "license": "MIT",
