@@ -4,10 +4,18 @@
     "keywords": ["Coroutines", "Multithreading", "Asynchronous"],
     "license": "MIT",
     "type": "project",
+    "authors": [
+        {
+            "name": "Michael Bagwell",
+            "email": "low_ghost@protonmail.com"
+        }
+    ],
     "require": {
+        "php": ">=5.3.0",
         "symfony/Process": "^2.7",
         "jeremeamia/superclosure": "~2.0"
     },
+    "homepage": "https://github.com/low-ghost/PhpMultithread",
     "autoload": {
         "psr-4": {"low_ghost\\PhpMultithread\\": ""}
     }
