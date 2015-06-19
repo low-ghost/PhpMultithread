@@ -2,7 +2,7 @@
 
 use Symfony\Component\Process\Process,
     Symfony\Component\Process\PhpProcess,
-    SuperClosure\Serializer,
+    Jeremeamia\SuperClosure\SerializableClosure,
     RuntimeException;
 
 class AsyncTask
@@ -17,8 +17,8 @@ class AsyncTask
                 $process = new Process($cmd);
             }
         } else if (is_callable($cmd)){
-            $serializer = new Serializer();
-            $process = new Process('php CreatePhpClosure.php ' . escapeshellarg($serializer->serialize($cmd)));
+            $postSerialize = new SerializableClosure($cmd);
+            $process = new Process('php CreatePhpClosure.php ' . escapeshellarg(serialize($postSerialize)));
         } else {
             throw new Exception("Improper command type, must be string, string containing <?php, or closure");
         }

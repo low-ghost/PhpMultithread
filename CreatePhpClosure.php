@@ -2,10 +2,7 @@
 
 require 'vendor/autoload.php';
 
-use SuperClosure\Serializer;
-
-$serializer = new Serializer();
-$unserial = $serializer->unserialize($argv[1]);
+$unserial = unserialize($argv[1]);
 $unserial();
 
 

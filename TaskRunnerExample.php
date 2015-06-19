@@ -2,13 +2,10 @@
 
 require 'vendor/autoload.php';
 
-use low_ghost\PhpMultithread\Scheduler,
-    Symfony\Component\Process\PhpProcess,
-    low_ghost\PhpMultithread\AsyncTask,
-    SuperClosure\Serializer;
+use \low_ghost\PhpMultithread\Scheduler,
+    \low_ghost\PhpMultithread\AsyncTask;
 
 $asyncTask = new AsyncTask;
-$serializer = new Serializer;
 //Limit to 4 concurrent processes
 $scheduler = new Scheduler(4);
 
