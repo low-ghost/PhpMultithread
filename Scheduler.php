@@ -20,14 +20,19 @@ class Scheduler
         $this->taskQueue = new SplQueue();
     }
 
-    public function store($task, $data, $name = false, $parent = false)
+    public function store($task, $data, $name = false, $parent = false, $store = false)
     {
         if ($parent){
-            if (!isset($this->returnObj[$parent]))
-                $this->returnObj[$parent] = [];
+            if (!isset($this->returnObj[$parent])) {
+                if ($store) {
+                    $this->returnObj[$parent] = $data;
+                } else {
+                    $this->returnObj[$parent] = [];
+                }
+            }
             if ($name)
                 $this->returnObj[$parent][$name] = $data;
-            else
+            else if (!$store)
                 $this->returnObj[$parent][$task->getTaskId()] = $data;
         } else if ($name){
             $this->returnObj[$name] = $data;
